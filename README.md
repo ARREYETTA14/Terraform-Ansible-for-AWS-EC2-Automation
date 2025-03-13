@@ -251,9 +251,9 @@ ansible-playbook -i inventory.ini ansible_playbook.yml
 ```
 
 ✅ This will:
-✔️ Update Worker Node
-✔️ Install Apache
-✔️ Start Apache
+- Update Worker Node
+- Install Apache
+- Start Apache
 
 ## Step 6: Verify Apache is Running
 
