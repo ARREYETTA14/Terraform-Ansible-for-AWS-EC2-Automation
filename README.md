@@ -193,7 +193,7 @@ Worker Node Public IP
 - SSH into your Master Node:
 
 ```bash
-ssh -i ~/.ssh/id_rsa ec2-user@<MASTER_PUBLIC_IP>
+ssh -i ~/.ssh/id_rsa ec2-user@<MASTER_PRIVATE_IP>
 ```
 
 - Verify that inventory.ini was created:
@@ -209,6 +209,54 @@ It should show:
 <WORKER_PRIVATE_IP> ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/id_rsa
 ```
 
+## Step 4: Create Ansible Playbook
 
+This playbook will:
+
+- Update the Worker Node
+- Install Apache
+- Start and Enable Apache
+
+```ansible_playbook.yml```
+
+```yaml
+---
+- name: Configure Worker Node
+  hosts: worker
+  become: yes
+  tasks:
+    - name: Update system
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install Apache
+      yum:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+```
+
+## Step 5: Run the Playbook
+
+On the Master Node, run:
+
+```bash
+ansible-playbook -i inventory.ini ansible_playbook.yml
+```
+
+✅ This will:
+✔️ Update Worker Node
+✔️ Install Apache
+✔️ Start Apache
+
+## Step 6: Verify Apache is Running
+
+Copy the ```worker_node_publicip``` and paste on your browser
 
 
