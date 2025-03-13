@@ -164,6 +164,51 @@ resource "aws_instance" "worker_node" {
 
 ```
 
+## Step 2: Deploy Terraform
+
+- Initialize Terraform
+
+```bash
+terraform init
+```
+
+- Validate Configuration
+
+```bash
+terraform validate
+```
+
+- Apply Configuration
+
+```bash
+terraform apply -auto-approve
+```
+
+📌 Outputs will show:
+
+Worker Node Public IP
+
+## Step 3: SSH into Master & Verify Inventory
+
+- SSH into your Master Node:
+
+```bash
+ssh -i ~/.ssh/id_rsa ec2-user@<MASTER_PUBLIC_IP>
+```
+
+- Verify that inventory.ini was created:
+
+```bash
+cat /home/ec2-user/inventory.ini
+```
+
+It should show:
+
+```bash
+[worker]
+<WORKER_PRIVATE_IP> ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/id_rsa
+```
+
 
 
 
