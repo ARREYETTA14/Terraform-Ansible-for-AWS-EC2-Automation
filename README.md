@@ -262,6 +262,9 @@ ansible -i /home/ec2-user/inventory.ini all -m ping
 ```json
 
 worker-node-ip | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
     "changed": false,
     "ping": "pong"
 }
