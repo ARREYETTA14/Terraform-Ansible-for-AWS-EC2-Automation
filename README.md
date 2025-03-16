@@ -258,7 +258,9 @@ ansible -i /home/ec2-user/inventory.ini all -m ping
 ```
 
 # Output:
+
 ```json
+
 worker-node-ip | SUCCESS => {
     "changed": false,
     "ping": "pong"
