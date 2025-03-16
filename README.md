@@ -41,21 +41,38 @@ output "worker_ip" {
   value = aws_instance.worker_node.public_ip
 }
 
-######### key pairs #########
+######### Passing key pairs #########
 
-## Master Keypair
-resource "aws_key_pair" "master_key" {
-  key_name   = "master1_key"
-  public_key = file("~/.ssh/id_rsa.pub")
+### Generate a Private Key
+
+resource "tls_private_key" "ansible_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
+- Creates a 4096-bit RSA private key.
+- This key will be used to authenticate SSH connections securely.
 
-## slave keypair
-resource "aws_key_pair" "worker_key" {
-  key_name   = "worker1_key"
-  public_key = file("~/.ssh/id_rsa.pub")
+### Upload the Public Key to AWS
+
+resource "aws_key_pair" "ansible_key" {
+  key_name   = "ansible_key_1"
+  public_key = tls_private_key.ansible_key.public_key_openssh
 }
 
+- Uploads the generated public key to AWS under the name ```ansible_key_1```.
+- This key will be used when launching EC2 instances.
+
+### Save the Private Key Locally
+
+resource "local_file" "private_key" {
+  content  = tls_private_key.ansible_key.private_key_pem
+  filename = "ansible_key.pem"
+  file_permission = "0400"
+}
+
+- Stores the private key in a local file named ```ansible_key.pem```.
+- Sets read-only permissions (0400) to prevent unauthorized access.
 
 ######### Security Groups ##########
 
@@ -128,7 +145,7 @@ data "aws_ami" "amzlnx2_ami" {
 resource "aws_instance" "master_node" {
   ami             = data.aws_ami.amzlnx2_ami.id
   instance_type   = var.instance_type
-  key_name        = aws_key_pair.master_key.key_name
+  key_name        = aws_key_pair.ansible_key.key_name
   security_groups = [aws_security_group.master_sg.name]
 
   tags = {
@@ -140,16 +157,17 @@ resource "aws_instance" "master_node" {
     sudo yum update -y
     sudo yum install -y ansible
     sudo echo "[worker]" > /home/ec2-user/inventory.ini
-    echo "${aws_instance.worker_node.private_ip} ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/id_rsa" >> /home/ec2-user/inventory.ini
+    echo "${aws_instance.worker_node.private_ip} ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/ansible_key.pem" >> /home/ec2-user/inventory.ini
   EOF
 }
+
 
 
 ##worker node
 resource "aws_instance" "worker_node" {
   ami             = data.aws_ami.amzlnx2_ami
   instance_type   = var.instance_type
-  key_name        = aws_key_pair.worker_key.key_name
+  key_name        = aws_key_pair.ansible_key.key_name
   security_groups = [aws_security_group.worker_sg.name]
 
   tags = {
@@ -190,10 +208,16 @@ Worker Node Public IP
 
 ## Step 3: SSH into Master & Verify Inventory
 
+- Navigate to the directory that has your ```ansible_key.pem``` key run:
+
+```bash
+chmod 400 ansible_key.pem
+```
+
 - SSH into your Master Node:
 
 ```bash
-ssh -i ~/.ssh/id_rsa ec2-user@<MASTER_PRIVATE_IP>
+ssh -i ansible_key.pem ec2-user@<master-node-public-ip>
 ```
 
 - Verify that inventory.ini was created:
@@ -206,8 +230,23 @@ It should show:
 
 ```bash
 [worker]
-<WORKER_PRIVATE_IP> ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/id_rsa
+<WORKER_PRIVATE_IP> ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/ansible_key.pem
 ```
+
+- Run ansible ping command
+
+```bash
+ansible -i /home/ec2-user/inventory.ini all -m ping
+```
+
+# Output:
+```json
+worker-node-ip | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
 
 ## Step 4: Create Ansible Playbook
 
