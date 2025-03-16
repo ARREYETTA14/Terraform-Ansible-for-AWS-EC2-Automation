@@ -183,7 +183,7 @@ resource "aws_instance" "master_node" {
 
 ##worker node
 resource "aws_instance" "worker_node" {
-  ami             = data.aws_ami.amzlnx2_ami
+  ami             = data.aws_ami.amzlnx2_ami.id
   instance_type   = var.instance_type
   key_name        = aws_key_pair.ansible_key.key_name
   security_groups = [aws_security_group.worker_sg.name]
