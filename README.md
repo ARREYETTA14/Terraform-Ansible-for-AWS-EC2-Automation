@@ -152,10 +152,28 @@ resource "aws_instance" "master_node" {
     Name = var.masternode_tag
   }
 
+  # Add this provisioner block here
+  provisioner "file" {
+    content     = tls_private_key.ansible_key.private_key_pem
+    destination = "/home/ec2-user/ansible_key.pem"
+
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      private_key = tls_private_key.ansible_key.private_key_pem
+      host        = self.public_ip
+    }
+  }
+
+  # Replace your existing user_data with this
   user_data = <<-EOF
     #!/bin/bash
     sudo yum update -y
-    sudo yum install -y ansible
+    sudo amazon-linux-extras install ansible2 -y 
+    sudo mkdir -p /home/ec2-user/.ssh
+    sudo mv /home/ec2-user/ansible_key.pem /home/ec2-user/.ssh/
+    sudo chmod 400 /home/ec2-user/.ssh/ansible_key.pem
+    sudo chown ec2-user:ec2-user /home/ec2-user/.ssh/ansible_key.pem
     sudo echo "[worker]" > /home/ec2-user/inventory.ini
     echo "${aws_instance.worker_node.private_ip} ansible_ssh_user=ec2-user ansible_ssh_private_key_file=/home/ec2-user/.ssh/ansible_key.pem" >> /home/ec2-user/inventory.ini
   EOF
